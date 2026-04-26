@@ -87,7 +87,9 @@ If ADB is not published externally, run this through your own debug access or te
 
 Only the HTTPS/WSS reverse proxy is exposed externally (`HTTP_PORT` and `HTTPS_PORT`). Do not publish `8554`, `5554`, or `5555`: emulator gRPC, console, and ADB are not intended for direct internet access.
 
-If `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are set, Caddy enables basic auth. If they are empty, the configuration is intended only for a private network. `LAN_HOST` and `PUBLIC_HOST` use Caddy internal TLS; a publicly trusted certificate requires standard ACME access on 80/443 or a separate certificate issuance flow. For internet access, use WireGuard/Tailscale or a complete authentication scheme.
+If `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are set, Caddy enables basic auth. If they are empty, the configuration is intended only for a private network. `LAN_HOST` always uses Caddy internal TLS. `PUBLIC_HOST` uses Caddy internal TLS by default, or Let's Encrypt DNS-01 through Cloudflare when `CADDY_ACME_DNS_CLOUDFLARE=true` and `CLOUDFLARE_API_TOKEN` is set. For internet access, use WireGuard/Tailscale or a complete authentication scheme.
+
+The Cloudflare token must be a scoped API token with `Zone.Zone:Read` and `Zone.DNS:Edit` for the zone that contains `PUBLIC_HOST`. DNS-01 does not require inbound port 80 to be reachable, but `PUBLIC_HOST` must be a real DNS name in Cloudflare.
 
 ## Env
 
@@ -126,6 +128,10 @@ TOUCH_DEBUG=false
 BASIC_AUTH_USER=
 BASIC_AUTH_PASSWORD=
 DEBUG_ROUTES=false
+CADDY_ACME_EMAIL=
+CADDY_ACME_DNS_CLOUDFLARE=false
+CADDY_ACME_DNS_RESOLVERS=1.1.1.1
+CLOUDFLARE_API_TOKEN=
 ```
 
 `INPUT_MODE=unary` uses `sendTouch` and is the default for the Docker emulator image. `INPUT_MODE=stream` is kept for emulator builds where `streamInputEvent` is available.

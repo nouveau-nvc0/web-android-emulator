@@ -1,4 +1,5 @@
 {
+	import /etc/caddy/global.caddy
 	default_sni {$LAN_HOST}
 	auto_https disable_redirects
 }
@@ -19,7 +20,7 @@
 }
 
 {$PUBLIC_HOST:localhost} {
-	tls internal
+	import /etc/caddy/public_tls.caddy
 	import remote_app
 }
 

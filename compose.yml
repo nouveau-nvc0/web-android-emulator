@@ -81,7 +81,9 @@ services:
       - "8080"
 
   proxy:
-    image: caddy:2.8-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
     depends_on:
       - app
       - envoy
@@ -91,6 +93,10 @@ services:
       HTTPS_PORT: ${HTTPS_PORT:-38001}
       BASIC_AUTH_USER: ${BASIC_AUTH_USER:-}
       BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
+      CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:-}
+      CADDY_ACME_DNS_CLOUDFLARE: ${CADDY_ACME_DNS_CLOUDFLARE:-false}
+      CADDY_ACME_DNS_RESOLVERS: ${CADDY_ACME_DNS_RESOLVERS:-}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
     ports:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-38001}:443"
@@ -103,6 +109,26 @@ services:
       - sh
       - -c
       - |
+        if [ -n "$$CADDY_ACME_EMAIL" ]; then
+          printf 'email %s\n' "$$CADDY_ACME_EMAIL" > /etc/caddy/global.caddy
+        else
+          printf '# acme email unset\n' > /etc/caddy/global.caddy
+        fi
+
+        if [ "$$CADDY_ACME_DNS_CLOUDFLARE" = "true" ]; then
+          if [ -z "$$CLOUDFLARE_API_TOKEN" ]; then
+            echo "CLOUDFLARE_API_TOKEN is required when CADDY_ACME_DNS_CLOUDFLARE=true" >&2
+            exit 1
+          fi
+          printf 'tls {\n  dns cloudflare {env.CLOUDFLARE_API_TOKEN}\n' > /etc/caddy/public_tls.caddy
+          if [ -n "$$CADDY_ACME_DNS_RESOLVERS" ]; then
+            printf '  resolvers %s\n' "$$CADDY_ACME_DNS_RESOLVERS" >> /etc/caddy/public_tls.caddy
+          fi
+          printf '}\n' >> /etc/caddy/public_tls.caddy
+        else
+          printf 'tls internal\n' > /etc/caddy/public_tls.caddy
+        fi
+
         if [ -n "$$BASIC_AUTH_USER" ] && [ -n "$$BASIC_AUTH_PASSWORD" ]; then
           HASH="$$(caddy hash-password --plaintext "$$BASIC_AUTH_PASSWORD")"
           printf 'basic_auth {\n  %s %s\n}\n' "$$BASIC_AUTH_USER" "$$HASH" > /etc/caddy/auth.caddy
