@@ -58,10 +58,10 @@ For NAT traversal, Compose starts coturn. Forward these ports from your router t
 ```text
 HTTPS_PORT tcp/udp
 TURN_PORT tcp/udp
-TURN_MIN_PORT-TURN_MAX_PORT udp
+TURN_MIN_PORT-TURN_MAX_PORT tcp/udp
 ```
 
-By default these are `38001 tcp/udp`, `38002 tcp/udp`, and `38010-38050 udp`.
+By default these are `38001 tcp/udp`, `38002 tcp/udp`, and `38010-38050 tcp/udp`.
 
 ADB keys can be provided through `.env`:
 
@@ -114,6 +114,8 @@ TURN_PORT=38002
 TURN_MIN_PORT=38010
 TURN_MAX_PORT=38050
 TURN_REALM=remote-emulator
+TURN_LISTENING_IP=0.0.0.0
+TURN_RELAY_IP=
 TURN_USER=remote
 TURN_SHARED_SECRET=change-me
 TURN_CREDENTIAL_TTL_SECONDS=3600
@@ -167,7 +169,7 @@ CLOUDFLARE_API_TOKEN=
 openssl rand -base64 32
 ```
 
-Coturn uses the TURN REST API: the browser receives short-lived HMAC credentials for `TURN_CREDENTIAL_TTL_SECONDS`, not a permanent password. `TURN_DENY_PRIVATE_PEERS=true` denies relay access to private/reserved IPv4 ranges so TURN cannot be used as a proxy into a local network. The Compose bridge network used by the emulator peer is the only intentional exception. Quotas and bandwidth limits reduce impact if temporary credentials leak.
+Coturn uses the TURN REST API: the browser receives short-lived HMAC credentials for `TURN_CREDENTIAL_TTL_SECONDS`, not a permanent password. When `TURN_EXTERNAL_IP` is set and `TURN_RELAY_IP` is empty, the startup script maps the public IP to the coturn container's detected private IPv4 address. `TURN_RELAY_IP` can be set explicitly if Docker's detected address is not the one receiving relay traffic. `TURN_DENY_PRIVATE_PEERS=true` denies relay access to private/reserved IPv4 ranges so TURN cannot be used as a proxy into a local network. The Compose bridge network used by the emulator peer is the only intentional exception. Quotas and bandwidth limits reduce impact if temporary credentials leak.
 
 ## API
 
@@ -230,7 +232,9 @@ If WebRTC does not connect:
 - check `/grpc` through proxy/envoy;
 - check that `TURN_HOST` resolves to the external address of your router;
 - check that `TURN_EXTERNAL_IP` is the router WAN IP if coturn runs behind NAT;
-- check firewall/port forwarding: `HTTPS_PORT tcp/udp`, `TURN_PORT tcp/udp`, `TURN_MIN_PORT-TURN_MAX_PORT udp`;
+- check firewall/port forwarding: `HTTPS_PORT tcp/udp`, `TURN_PORT tcp/udp`, `TURN_MIN_PORT-TURN_MAX_PORT tcp/udp`;
+- in emulator logs, ICE must move past `kIceConnectionChecking` to `kIceConnectionConnected` or `kIceConnectionCompleted`;
+- in coturn logs, a browser load should create allocation/permission entries; if there are none, the browser is not reaching TURN;
 - use WireGuard/Tailscale for remote access.
 
 If touch coordinates are offset or incorrect:

@@ -6,6 +6,24 @@ if [ -z "${TURN_SHARED_SECRET:-}" ] || [ "${TURN_SHARED_SECRET:-}" = "change-me"
   exit 64
 fi
 
+first_ipv4() {
+  for ip in $(hostname -i 2>/dev/null || true); do
+    case "$ip" in
+      *.*)
+        printf '%s\n' "$ip"
+        return 0
+        ;;
+    esac
+  done
+
+  return 1
+}
+
+container_ipv4="$(first_ipv4 || true)"
+turn_listening_ip="${TURN_LISTENING_IP:-0.0.0.0}"
+turn_relay_ip="${TURN_RELAY_IP:-$container_ipv4}"
+turn_external_ip=""
+
 set -- \
   turnserver \
   -n \
@@ -28,13 +46,33 @@ set -- \
   --max-bps="${TURN_MAX_BPS:-2500000}" \
   --bps-capacity="${TURN_BPS_CAPACITY:-25000000}" \
   --allocation-default-address-family=ipv4 \
+  --listening-ip="${turn_listening_ip}" \
   --listening-port="${TURN_PORT:-38002}" \
   --min-port="${TURN_MIN_PORT:-38010}" \
   --max-port="${TURN_MAX_PORT:-38050}"
 
-if [ -n "${TURN_EXTERNAL_IP:-}" ]; then
-  set -- "$@" --external-ip="${TURN_EXTERNAL_IP}"
+if [ -n "${turn_relay_ip}" ]; then
+  set -- "$@" --relay-ip="${turn_relay_ip}"
 fi
+
+if [ -n "${TURN_EXTERNAL_IP:-}" ]; then
+  case "${TURN_EXTERNAL_IP}" in
+    */*)
+      turn_external_ip="${TURN_EXTERNAL_IP}"
+      ;;
+    *)
+      if [ -n "${turn_relay_ip}" ]; then
+        turn_external_ip="${TURN_EXTERNAL_IP}/${turn_relay_ip}"
+      else
+        turn_external_ip="${TURN_EXTERNAL_IP}"
+      fi
+      ;;
+  esac
+
+  set -- "$@" --external-ip="${turn_external_ip}"
+fi
+
+echo "turn: listening-ip=${turn_listening_ip} relay-ip=${turn_relay_ip:-<unset>} external-ip=${turn_external_ip:-<unset>} ports=${TURN_PORT:-38002}/${TURN_MIN_PORT:-38010}-${TURN_MAX_PORT:-38050}"
 
 if [ "${TURN_DENY_PRIVATE_PEERS:-true}" = "true" ]; then
   # The emulator is a WebRTC peer inside the Compose bridge network. Keep the
@@ -46,7 +84,7 @@ if [ "${TURN_DENY_PRIVATE_PEERS:-true}" = "true" ]; then
     TURN_DENIED_PEER_ARGS="${TURN_DENIED_PEER_ARGS} --denied-peer-ip=$1"
   }
 
-  first_ip="$(hostname -i 2>/dev/null | cut -d ' ' -f 1)"
+  first_ip="$turn_relay_ip"
   first_octet="$(printf '%s' "$first_ip" | cut -d . -f 1)"
   second_octet="$(printf '%s' "$first_ip" | cut -d . -f 2)"
   third_octet="$(printf '%s' "$first_ip" | cut -d . -f 3)"

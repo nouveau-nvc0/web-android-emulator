@@ -9,6 +9,8 @@ services:
       TURN_MIN_PORT: ${TURN_MIN_PORT:-38010}
       TURN_MAX_PORT: ${TURN_MAX_PORT:-38050}
       TURN_EXTERNAL_IP: ${TURN_EXTERNAL_IP:-}
+      TURN_LISTENING_IP: ${TURN_LISTENING_IP:-0.0.0.0}
+      TURN_RELAY_IP: ${TURN_RELAY_IP:-}
       TURN_DENY_PRIVATE_PEERS: ${TURN_DENY_PRIVATE_PEERS:-true}
       TURN_USER_QUOTA: ${TURN_USER_QUOTA:-2}
       TURN_TOTAL_QUOTA: ${TURN_TOTAL_QUOTA:-20}
@@ -22,6 +24,7 @@ services:
       - "${TURN_PORT:-38002}:${TURN_PORT:-38002}/udp"
       - "${TURN_PORT:-38002}:${TURN_PORT:-38002}/tcp"
       - "${TURN_MIN_PORT:-38010}-${TURN_MAX_PORT:-38050}:${TURN_MIN_PORT:-38010}-${TURN_MAX_PORT:-38050}/udp"
+      - "${TURN_MIN_PORT:-38010}-${TURN_MAX_PORT:-38050}:${TURN_MIN_PORT:-38010}-${TURN_MAX_PORT:-38050}/tcp"
     volumes:
       - ./scripts/start-turn.sh:/usr/local/bin/start-turn.sh:ro
 
