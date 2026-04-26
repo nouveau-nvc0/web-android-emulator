@@ -8,7 +8,7 @@ import type {
 } from "./types.js";
 
 const DEFAULT_WIDTH = 1080;
-const DEFAULT_HEIGHT = 1920;
+const DEFAULT_HEIGHT = 2400;
 const DEFAULT_DISPLAY = 0;
 const DEFAULT_REFRESH_MS = 5000;
 const LOG_THROTTLE_MS = 30000;

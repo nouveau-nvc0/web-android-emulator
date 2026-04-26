@@ -32,7 +32,6 @@ set -- \
   --static-auth-secret="${TURN_SHARED_SECRET}" \
   --realm="${TURN_REALM:-remote-emulator}" \
   --fingerprint \
-  --secure-stun \
   --no-multicast-peers \
   --no-tls \
   --no-dtls \
@@ -50,6 +49,10 @@ set -- \
   --listening-port="${TURN_PORT:-38002}" \
   --min-port="${TURN_MIN_PORT:-38010}" \
   --max-port="${TURN_MAX_PORT:-38050}"
+
+if [ "${TURN_SECURE_STUN:-false}" = "true" ]; then
+  set -- "$@" --secure-stun
+fi
 
 if [ -n "${turn_relay_ip}" ]; then
   set -- "$@" --relay-ip="${turn_relay_ip}"

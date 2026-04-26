@@ -20,8 +20,12 @@ interface CommandResult {
   stderr: string;
 }
 
+export type AndroidNavigationMode = "threebutton" | "gestural";
+
 const DEFAULT_COMMAND_TIMEOUT_MS = 8000;
 const DEFAULT_RECONNECT_INTERVAL_MS = 15000;
+const DEFAULT_BOOT_TIMEOUT_MS = 180000;
+const BOOT_POLL_MS = 2000;
 const COMPONENT_PACKAGE_PATTERN = /([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+)\/[A-Za-z0-9_.$]+/;
 const FOREGROUND_MARKERS = [
   /topResumedActivity/,
@@ -83,6 +87,35 @@ export class AdbAppControl implements AppControl {
     }
   }
 
+  async configureNavigationMode(mode: AndroidNavigationMode): Promise<void> {
+    await this.waitForBoot();
+    await this.runShell(["cmd", "overlay", "enable-exclusive", "--category", navigationOverlayForMode(mode)]);
+  }
+
+  private async waitForBoot(timeoutMs = DEFAULT_BOOT_TIMEOUT_MS): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    let lastError: unknown = null;
+
+    while (Date.now() < deadline) {
+      try {
+        await this.ensureConnected();
+        await runCommand(this.adbBin, ["-s", this.serial, "wait-for-device"], this.remainingTimeout(deadline));
+
+        const result = await this.runShell(["getprop", "sys.boot_completed"]);
+        if (result.stdout.trim() === "1") {
+          return;
+        }
+      } catch (error) {
+        lastError = error;
+      }
+
+      await delay(BOOT_POLL_MS);
+    }
+
+    const suffix = lastError instanceof Error ? `: ${lastError.message}` : "";
+    throw new Error(`timed out waiting for Android boot completion${suffix}`);
+  }
+
   private async runShell(args: string[]): Promise<CommandResult> {
     await this.ensureConnected();
     return runCommand(this.adbBin, ["-s", this.serial, "shell", ...args], this.commandTimeoutMs);
@@ -90,6 +123,7 @@ export class AdbAppControl implements AppControl {
 
   private async ensureConnected(): Promise<void> {
     await this.ensureAdbKey();
+    await runCommand(this.adbBin, ["start-server"], this.commandTimeoutMs);
 
     if (!this.serial.includes(":")) {
       return;
@@ -102,6 +136,10 @@ export class AdbAppControl implements AppControl {
 
     await runCommand(this.adbBin, ["connect", this.serial], this.commandTimeoutMs);
     this.lastConnectAttemptAt = now;
+  }
+
+  private remainingTimeout(deadline: number): number {
+    return Math.max(1000, Math.min(this.commandTimeoutMs, deadline - Date.now()));
   }
 
   private async ensureAdbKey(): Promise<void> {
@@ -157,10 +195,25 @@ export function parseForegroundPackage(output: string): string | null {
   return null;
 }
 
+export function navigationOverlayForMode(mode: AndroidNavigationMode): string {
+  switch (mode) {
+    case "threebutton":
+      return "com.android.internal.systemui.navbar.threebutton";
+    case "gestural":
+      return "com.android.internal.systemui.navbar.gestural";
+  }
+}
+
 function packageFromComponent(value: string): string | null {
   const match = COMPONENT_PACKAGE_PATTERN.exec(value);
   const packageName = match?.[1];
   return packageName && isValidAndroidPackageName(packageName) ? packageName : null;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function firstNonEmptyLine(value: string): string | null {

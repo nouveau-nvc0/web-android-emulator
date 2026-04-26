@@ -6,7 +6,7 @@ import { attachTouchWebSocket } from "../../src/server/websocketTouchBridge";
 import { MockGrpcClient } from "./mockGrpc";
 import type { EmulatorTouchEvent, GrpcCallback } from "../../src/server/types";
 
-const display = { width: 1080, height: 1920, display: 0 };
+const display = { width: 1080, height: 2400, display: 0 };
 
 let currentServer: Server | null = null;
 let currentWss: WebSocketServer | null = null;
@@ -137,7 +137,7 @@ describe("websocket touch bridge", () => {
     expect(grpc.sentTouches[1]?.touches[0]).toMatchObject({
       identifier: 0,
       x: 324,
-      y: 576
+      y: 720
     });
   });
 });

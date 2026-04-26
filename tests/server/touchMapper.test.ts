@@ -4,7 +4,7 @@ import type { BrowserTouchMessage, DisplayConfig } from "../../src/server/types"
 
 const display: DisplayConfig = {
   width: 1080,
-  height: 1920,
+  height: 2400,
   display: 0
 };
 
@@ -18,13 +18,13 @@ describe("toInputEvent", () => {
   it("maps x=1, y=1 to width-1,height-1", () => {
     const touch = map({ x: 1, y: 1 }).touch_event.touches[0];
 
-    expect(touch).toMatchObject({ x: 1079, y: 1919 });
+    expect(touch).toMatchObject({ x: 1079, y: 2399 });
   });
 
   it("rounds midpoint coordinates", () => {
     const touch = map({ x: 0.5, y: 0.5 }).touch_event.touches[0];
 
-    expect(touch).toMatchObject({ x: 540, y: 960 });
+    expect(touch).toMatchObject({ x: 540, y: 1200 });
   });
 
   it("clamps x/y below 0 and above 1", () => {
@@ -32,7 +32,7 @@ describe("toInputEvent", () => {
     const high = map({ x: 2, y: 2 }).touch_event.touches[0];
 
     expect(low).toMatchObject({ x: 0, y: 0 });
-    expect(high).toMatchObject({ x: 1079, y: 1919 });
+    expect(high).toMatchObject({ x: 1079, y: 2399 });
   });
 
   it("maps down pressure 0.5 to nonzero pressure", () => {

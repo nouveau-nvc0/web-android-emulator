@@ -119,10 +119,12 @@ TURN_RELAY_IP=
 TURN_USER=remote
 TURN_SHARED_SECRET=change-me
 TURN_CREDENTIAL_TTL_SECONDS=3600
-TURN_ICE_TRANSPORT_POLICY=relay
+TURN_STUN_URLS=
+TURN_ICE_TRANSPORT_POLICY=all
+TURN_SECURE_STUN=false
 TURN_DENY_PRIVATE_PEERS=true
-TURN_USER_QUOTA=2
-TURN_TOTAL_QUOTA=20
+TURN_USER_QUOTA=12
+TURN_TOTAL_QUOTA=100
 TURN_MAX_BPS=2500000
 TURN_BPS_CAPACITY=25000000
 EMULATOR_GRPC=emulator:8554
@@ -139,13 +141,14 @@ EMULATOR_PARAMS=
 ADBKEY=
 ADBKEY_PUB=
 EMU_WIDTH=1080
-EMU_HEIGHT=1920
+EMU_HEIGHT=2400
 EMU_DISPLAY=0
 INPUT_MODE=unary
 GRPC_WEB_URI=/grpc
 ENABLE_MOUSE_INPUT=false
 TOUCH_DEBUG=false
 APP_CONTROL_ENABLED=true
+ANDROID_NAVIGATION_MODE=threebutton
 EMULATOR_ADB_SERIAL=emulator:5555
 ADB_BIN=adb
 BASIC_AUTH_USER=
@@ -163,13 +166,17 @@ CLOUDFLARE_API_TOKEN=
 
 `APP_CONTROL_ENABLED=true` enables URL app linking through ADB. `EMULATOR_ADB_SERIAL` points to the emulator ADB TCP endpoint inside the Compose network.
 
+`ANDROID_NAVIGATION_MODE=threebutton` switches Android system navigation from gestures to the classic Back/Home/Overview button bar after boot. Set it to `gestural` to restore gesture navigation, or `none` to leave the emulator default unchanged.
+
 `TURN_SHARED_SECRET` must be a strong random value, for example:
 
 ```bash
 openssl rand -base64 32
 ```
 
-Coturn uses the TURN REST API: the browser receives short-lived HMAC credentials for `TURN_CREDENTIAL_TTL_SECONDS`, not a permanent password. When `TURN_EXTERNAL_IP` is set and `TURN_RELAY_IP` is empty, the startup script maps the public IP to the coturn container's detected private IPv4 address. `TURN_RELAY_IP` can be set explicitly if Docker's detected address is not the one receiving relay traffic. `TURN_DENY_PRIVATE_PEERS=true` denies relay access to private/reserved IPv4 ranges so TURN cannot be used as a proxy into a local network. The Compose bridge network used by the emulator peer is the only intentional exception. Quotas and bandwidth limits reduce impact if temporary credentials leak.
+Coturn uses the TURN REST API: the browser receives short-lived HMAC credentials for `TURN_CREDENTIAL_TTL_SECONDS`, not a permanent password. When `TURN_EXTERNAL_IP` is set and `TURN_RELAY_IP` is empty, the startup script maps the public IP to the coturn container's detected private IPv4 address. `TURN_RELAY_IP` can be set explicitly if Docker's detected address is not the one receiving relay traffic. `TURN_STUN_URLS` defaults to the same coturn endpoint and `TURN_ICE_TRANSPORT_POLICY=all` lets WebRTC try direct/STUN candidates before falling back to TURN relay. Keep `TURN_SECURE_STUN=false` for browser WebRTC; authenticated STUN breaks normal ICE connectivity checks. `TURN_DENY_PRIVATE_PEERS=true` denies relay access to private/reserved IPv4 ranges so TURN cannot be used as a proxy into a local network. The Compose bridge network used by the emulator peer is the only intentional exception. Quotas and bandwidth limits reduce impact if temporary credentials leak.
+
+For direct LAN WebRTC, set `TURN_DENY_PRIVATE_PEERS=false`; otherwise coturn will reject browser or gateway candidates such as `192.168.x.x`, and ICE may remain stuck on checking. Use `true` only when you intentionally require relay-only behavior and do not want temporary TURN credentials to reach private network peers.
 
 ## API
 
@@ -182,7 +189,7 @@ Coturn uses the TURN REST API: the browser receives short-lived HMAC credentials
 `GET /display-config`
 
 ```json
-{ "width": 1080, "height": 1920, "display": 0 }
+{ "width": 1080, "height": 2400, "display": 0 }
 ```
 
 `GET /emulator-status` shows emulator gRPC availability.

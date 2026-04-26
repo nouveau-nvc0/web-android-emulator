@@ -11,9 +11,10 @@ services:
       TURN_EXTERNAL_IP: ${TURN_EXTERNAL_IP:-}
       TURN_LISTENING_IP: ${TURN_LISTENING_IP:-0.0.0.0}
       TURN_RELAY_IP: ${TURN_RELAY_IP:-}
+      TURN_SECURE_STUN: ${TURN_SECURE_STUN:-false}
       TURN_DENY_PRIVATE_PEERS: ${TURN_DENY_PRIVATE_PEERS:-true}
-      TURN_USER_QUOTA: ${TURN_USER_QUOTA:-2}
-      TURN_TOTAL_QUOTA: ${TURN_TOTAL_QUOTA:-20}
+      TURN_USER_QUOTA: ${TURN_USER_QUOTA:-12}
+      TURN_TOTAL_QUOTA: ${TURN_TOTAL_QUOTA:-100}
       TURN_MAX_BPS: ${TURN_MAX_BPS:-2500000}
       TURN_BPS_CAPACITY: ${TURN_BPS_CAPACITY:-25000000}
       TURN_STALE_NONCE_SECONDS: ${TURN_STALE_NONCE_SECONDS:-600}
@@ -55,6 +56,7 @@ services:
       TURN_USER: ${TURN_USER:-remote}
       TURN_SHARED_SECRET: ${TURN_SHARED_SECRET:-change-me}
       TURN_CREDENTIAL_TTL_SECONDS: ${TURN_CREDENTIAL_TTL_SECONDS:-3600}
+      TURN_STUN_URLS: ${TURN_STUN_URLS:-}
       TURN_ICE_TRANSPORT_POLICY: ${TURN_ICE_TRANSPORT_POLICY:-all}
     devices:
       - /dev/kvm:/dev/kvm
@@ -84,7 +86,7 @@ services:
       EMULATOR_GRPC: ${EMULATOR_GRPC:-emulator:8554}
       EMULATOR_PROTO: /app/proto/emulator_controller.proto
       EMU_WIDTH: ${EMU_WIDTH:-1080}
-      EMU_HEIGHT: ${EMU_HEIGHT:-1920}
+      EMU_HEIGHT: ${EMU_HEIGHT:-2400}
       EMU_DISPLAY: ${EMU_DISPLAY:-0}
       INPUT_MODE: ${INPUT_MODE:-unary}
       DEBUG_ROUTES: ${DEBUG_ROUTES:-false}
@@ -92,6 +94,7 @@ services:
       ENABLE_MOUSE_INPUT: ${ENABLE_MOUSE_INPUT:-false}
       TOUCH_DEBUG: ${TOUCH_DEBUG:-false}
       APP_CONTROL_ENABLED: ${APP_CONTROL_ENABLED:-true}
+      ANDROID_NAVIGATION_MODE: ${ANDROID_NAVIGATION_MODE:-threebutton}
       EMULATOR_ADB_SERIAL: ${EMULATOR_ADB_SERIAL:-emulator:5555}
       ADB_BIN: ${ADB_BIN:-adb}
       ADBKEY: ${ADBKEY:-}
@@ -147,7 +150,7 @@ services:
             echo "CLOUDFLARE_API_TOKEN is required when CADDY_ACME_DNS_CLOUDFLARE=true" >&2
             exit 1
           fi
-          printf 'tls {\n  dns cloudflare {env.CLOUDFLARE_API_TOKEN}\n' > /etc/caddy/public_tls.caddy
+          printf 'tls {\n  dns cloudflare {env.CLOUDFLARE_API_TOKEN}\n  resolvers 1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4\n  propagation_timeout 10m\n  propagation_delay 30s\n' > /etc/caddy/public_tls.caddy
           if [ -n "$$CADDY_ACME_DNS_RESOLVERS" ]; then
             printf '  resolvers %s\n' "$$CADDY_ACME_DNS_RESOLVERS" >> /etc/caddy/public_tls.caddy
           fi

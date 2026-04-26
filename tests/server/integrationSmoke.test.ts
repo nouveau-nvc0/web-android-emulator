@@ -6,7 +6,7 @@ import { createServerApp } from "../../src/server/app";
 import { attachTouchWebSocket } from "../../src/server/websocketTouchBridge";
 import { MockGrpcClient } from "./mockGrpc";
 
-const display = { width: 1080, height: 1920, display: 0 };
+const display = { width: 1080, height: 2400, display: 0 };
 let server: ReturnType<typeof createServer> | null = null;
 let wss: WebSocketServer | null = null;
 
@@ -73,8 +73,36 @@ describe("integration smoke", () => {
     expect(grpc.streams[0]?.events[0]?.touch_event.touches[0]).toMatchObject({
       identifier: 0,
       x: 108,
-      y: 384
+      y: 480
     });
+  });
+
+  it("serves installable fullscreen web manifests per Android app", async () => {
+    const app = createServerApp({ getDisplayConfig: () => display });
+
+    await request(app)
+      .get("/manifest.webmanifest")
+      .expect(200)
+      .expect("Content-Type", /application\/manifest\+json/)
+      .expect((res) => {
+        expect(res.body).toMatchObject({
+          id: "/pwa/default",
+          start_url: "/",
+          display: "fullscreen"
+        });
+      });
+
+    await request(app)
+      .get("/manifest.webmanifest?app=com.example.target")
+      .expect(200)
+      .expect((res) => {
+        expect(res.body).toMatchObject({
+          id: "/pwa/com.example.target",
+          short_name: "target",
+          start_url: "/?app=com.example.target",
+          display: "fullscreen"
+        });
+      });
   });
 
   it("serves app state and validates package launches", async () => {

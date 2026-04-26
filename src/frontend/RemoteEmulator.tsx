@@ -1,21 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { Emulator } from "android-emulator-webrtc/emulator";
 import { fetchForegroundAppPackage, launchAppPackage, readUrlAppPackage, writeUrlAppPackage } from "./appLinking";
-import { getFrontendConfig } from "./config";
+import { getFrontendConfig, type DisplayConfig } from "./config";
 import { fetchEmulatorStatus, type EmulatorStatus } from "./emulatorStatus";
 import { installTouchOverlay, mediaContentRect } from "./touchOverlay";
-
-interface DisplayConfig {
-  width: number;
-  height: number;
-  display: number;
-}
-
-const FALLBACK_DISPLAY: DisplayConfig = {
-  width: 1080,
-  height: 1920,
-  display: 0
-};
 
 const FALLBACK_STATUS: EmulatorStatus = {
   grpcAvailable: null,
@@ -26,12 +14,12 @@ const FALLBACK_STATUS: EmulatorStatus = {
 export function RemoteEmulator(): ReactElement {
   const touchLayerRef = useRef<HTMLDivElement | null>(null);
   const videoLayerRef = useRef<HTMLDivElement | null>(null);
-  const [displayConfig, setDisplayConfig] = useState<DisplayConfig>(FALLBACK_DISPLAY);
+  const frontendConfig = useMemo(() => getFrontendConfig(), []);
+  const [displayConfig, setDisplayConfig] = useState<DisplayConfig>(() => frontendConfig.displayConfig);
   const [emulatorStatus, setEmulatorStatus] = useState<EmulatorStatus>(FALLBACK_STATUS);
   const [webrtcState, setWebrtcState] = useState("connecting");
   const [webrtcError, setWebrtcError] = useState<string | null>(null);
   const [debugPoints, setDebugPoints] = useState<Map<number, { x: number; y: number }>>(new Map());
-  const frontendConfig = useMemo(() => getFrontendConfig(), []);
   const grpcUri = frontendConfig.grpcWebUri;
   const enableMouseInput = frontendConfig.enableMouseInput;
   const debugOverlay = frontendConfig.touchDebug;

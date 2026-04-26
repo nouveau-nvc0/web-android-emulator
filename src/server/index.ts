@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
-import { AdbAppControl } from "./adbAppControl.js";
+import { AdbAppControl, type AndroidNavigationMode } from "./adbAppControl.js";
 import { createServerApp } from "./app.js";
 import { DisplayConfigStore, fallbackDisplayConfigFromEnv } from "./displayConfig.js";
 import { createGrpcClient } from "./grpcClient.js";
@@ -15,6 +15,7 @@ const INPUT_MODE = parseInputMode(process.env.INPUT_MODE);
 const DEBUG_ROUTES = process.env.DEBUG_ROUTES === "true";
 const GRPC_WEB_URI = process.env.GRPC_WEB_URI ?? "/grpc";
 const APP_CONTROL_ENABLED = process.env.APP_CONTROL_ENABLED !== "false";
+const ANDROID_NAVIGATION_MODE = parseAndroidNavigationMode(process.env.ANDROID_NAVIGATION_MODE ?? "threebutton");
 const EMULATOR_ADB_SERIAL = process.env.EMULATOR_ADB_SERIAL ?? "emulator:5555";
 const ADB_BIN = process.env.ADB_BIN ?? "adb";
 const ADBKEY = process.env.ADBKEY;
@@ -26,7 +27,8 @@ const client = createGrpcClient({
 });
 const displayStore = new DisplayConfigStore(client, fallbackDisplayConfigFromEnv());
 displayStore.start();
-const appControl = APP_CONTROL_ENABLED
+const adbControl =
+  APP_CONTROL_ENABLED || ANDROID_NAVIGATION_MODE
   ? new AdbAppControl({
       adbBin: ADB_BIN,
       serial: EMULATOR_ADB_SERIAL,
@@ -34,6 +36,21 @@ const appControl = APP_CONTROL_ENABLED
       adbKeyPub: ADBKEY_PUB
     })
   : undefined;
+const appControl = APP_CONTROL_ENABLED ? adbControl : undefined;
+
+if (adbControl && ANDROID_NAVIGATION_MODE) {
+  void adbControl
+    .configureNavigationMode(ANDROID_NAVIGATION_MODE)
+    .then(() => {
+      console.info(`android navigation mode configured: ${ANDROID_NAVIGATION_MODE}`);
+    })
+    .catch((error: unknown) => {
+      console.warn(
+        "android navigation mode configuration failed",
+        error instanceof Error ? error.message : String(error)
+      );
+    });
+}
 
 const app = createServerApp({
   getDisplayConfig: () => displayStore.get(),
@@ -52,7 +69,8 @@ const app = createServerApp({
     inputMode: INPUT_MODE,
     emulatorGrpc: EMULATOR_GRPC,
     appControlEnabled: APP_CONTROL_ENABLED,
-    emulatorAdbSerial: EMULATOR_ADB_SERIAL
+    emulatorAdbSerial: EMULATOR_ADB_SERIAL,
+    androidNavigationMode: ANDROID_NAVIGATION_MODE
   })
 });
 
@@ -72,6 +90,18 @@ server.listen(PORT, () => {
 
 function parseInputMode(value: string | undefined): InputMode {
   return value === "stream" ? "stream" : "unary";
+}
+
+function parseAndroidNavigationMode(value: string | undefined): AndroidNavigationMode | null {
+  if (!value || value === "none" || value === "disabled" || value === "false") {
+    return null;
+  }
+
+  if (value === "threebutton" || value === "gestural") {
+    return value;
+  }
+
+  throw new Error(`ANDROID_NAVIGATION_MODE must be one of: threebutton, gestural, none; got '${value}'`);
 }
 
 function serveFrontend(app: express.Express): void {

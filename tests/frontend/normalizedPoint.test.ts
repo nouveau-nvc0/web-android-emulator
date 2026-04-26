@@ -74,18 +74,18 @@ describe("normalizedPoint", () => {
     ).toEqual({ x: 1, y: 1 });
   });
 
-  it("maps inside an actual media rect with top and bottom browser bars", () => {
+  it("maps inside an actual 1080x2400 media rect", () => {
     const mediaRect = containedContentRect({
       frameRect: rect({ width: 390, height: 844 }),
       contentWidth: 1080,
-      contentHeight: 1920
+      contentHeight: 2400
     });
 
     expect(mediaRect).not.toBeNull();
-    expect(mediaRect?.left).toBe(0);
-    expect(mediaRect?.top).toBeCloseTo(75.3333);
-    expect(mediaRect?.width).toBe(390);
-    expect(mediaRect?.height).toBeCloseTo(693.3333);
+    expect(mediaRect?.left).toBeCloseTo(5.1);
+    expect(mediaRect?.top).toBe(0);
+    expect(mediaRect?.width).toBeCloseTo(379.8);
+    expect(mediaRect?.height).toBe(844);
 
     expect(
       normalizedPoint({
@@ -93,7 +93,7 @@ describe("normalizedPoint", () => {
         clientY: mediaRect ? mediaRect.top + mediaRect.height / 2 : 0,
         stageRect: mediaRect ?? rect({ width: 390, height: 844 }),
         emulatorWidth: 1080,
-        emulatorHeight: 1920
+        emulatorHeight: 2400
       })
     ).toEqual({ x: 0.5, y: 0.5 });
   });

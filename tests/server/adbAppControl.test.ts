@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseForegroundPackage } from "../../src/server/adbAppControl";
+import { navigationOverlayForMode, parseForegroundPackage } from "../../src/server/adbAppControl";
 
 describe("parseForegroundPackage", () => {
   it("reads the focused app package from dumpsys window output", () => {
@@ -21,5 +21,12 @@ describe("parseForegroundPackage", () => {
 
   it("returns null when no foreground component is present", () => {
     expect(parseForegroundPackage("Display 0 info only")).toBeNull();
+  });
+});
+
+describe("navigationOverlayForMode", () => {
+  it("returns Android system UI overlay package names", () => {
+    expect(navigationOverlayForMode("threebutton")).toBe("com.android.internal.systemui.navbar.threebutton");
+    expect(navigationOverlayForMode("gestural")).toBe("com.android.internal.systemui.navbar.gestural");
   });
 });

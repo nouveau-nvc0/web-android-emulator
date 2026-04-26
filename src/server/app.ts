@@ -24,6 +24,7 @@ export interface AppOptions {
     emulatorStatus?: unknown;
     appControlEnabled?: boolean;
     emulatorAdbSerial?: string;
+    androidNavigationMode?: string | null;
   };
 }
 
@@ -97,6 +98,16 @@ export function createServerApp(options: AppOptions): express.Express {
     res.send(`window.REMOTE_EMULATOR_CONFIG=${JSON.stringify(config)};`);
   });
 
+  app.get("/manifest.webmanifest", (req, res) => {
+    res.type("application/manifest+json");
+    res.json(createWebManifest(readManifestPackage(req.query.app)));
+  });
+
+  app.get("/pwa-icon.svg", (_req, res) => {
+    res.type("image/svg+xml");
+    res.send(PWA_ICON_SVG);
+  });
+
   if (options.debugRoutes) {
     app.get("/debug/state", (_req, res) => {
       res.json(options.getDebugState?.() ?? { display: options.getDisplayConfig() });
@@ -106,11 +117,78 @@ export function createServerApp(options: AppOptions): express.Express {
   return app;
 }
 
+function createWebManifest(packageName: string | null): {
+  id: string;
+  name: string;
+  short_name: string;
+  description: string;
+  start_url: string;
+  scope: string;
+  display: "fullscreen";
+  display_override: string[];
+  orientation: "portrait";
+  background_color: string;
+  theme_color: string;
+  icons: Array<{
+    src: string;
+    sizes: string;
+    type: string;
+    purpose?: string;
+  }>;
+} {
+  const appSlug = packageName ? encodeURIComponent(packageName) : null;
+  const shortName = packageName ? shortAppName(packageName) : "Emulator";
+
+  return {
+    id: appSlug ? `/pwa/${appSlug}` : "/pwa/default",
+    name: packageName ? `Android ${shortName}` : "Remote Android Emulator",
+    short_name: shortName,
+    description: packageName ? `Remote Android Emulator shortcut for ${packageName}` : "Remote Android Emulator",
+    start_url: packageName ? `/?app=${appSlug}` : "/",
+    scope: "/",
+    display: "fullscreen",
+    display_override: ["fullscreen", "standalone", "minimal-ui"],
+    orientation: "portrait",
+    background_color: "#05070a",
+    theme_color: "#05070a",
+    icons: [
+      {
+        src: "/pwa-icon.svg",
+        sizes: "192x192",
+        type: "image/svg+xml",
+        purpose: "any maskable"
+      },
+      {
+        src: "/pwa-icon.svg",
+        sizes: "512x512",
+        type: "image/svg+xml",
+        purpose: "any maskable"
+      },
+      {
+        src: "/pwa-icon.svg",
+        sizes: "any",
+        type: "image/svg+xml",
+        purpose: "any maskable"
+      }
+    ]
+  };
+}
+
+function readManifestPackage(value: unknown): string | null {
+  return typeof value === "string" && isValidAndroidPackageName(value) ? value : null;
+}
+
+function shortAppName(packageName: string): string {
+  const segment = packageName.split(".").at(-1) ?? packageName;
+  return segment.length > 12 ? segment.slice(0, 12) : segment;
+}
+
 function readFrontendConfig(options: AppOptions): {
   grpcWebUri: string;
   enableMouseInput: boolean;
   touchDebug: boolean;
   appLinkingEnabled: boolean;
+  displayConfig: DisplayConfig;
 } {
   const config = options.frontendConfig ?? {
     grpcWebUri: process.env.GRPC_WEB_URI ?? "/grpc",
@@ -119,7 +197,10 @@ function readFrontendConfig(options: AppOptions): {
     appLinkingEnabled: Boolean(options.appControl) && process.env.APP_CONTROL_ENABLED !== "false"
   };
 
-  return config;
+  return {
+    ...config,
+    displayConfig: options.getDisplayConfig()
+  };
 }
 
 function readPackageName(body: unknown): string | null {
@@ -142,3 +223,14 @@ function disabledAppState(): ForegroundAppState {
 function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
+
+const PWA_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#05070a"/>
+  <rect x="118" y="54" width="276" height="404" rx="42" fill="#f8fafc"/>
+  <rect x="142" y="98" width="228" height="272" rx="18" fill="#111827"/>
+  <circle cx="256" cy="414" r="20" fill="#111827"/>
+  <path d="M206 196h100a34 34 0 0 1 34 34v58H172v-58a34 34 0 0 1 34-34Z" fill="#22c55e"/>
+  <path d="M216 176l-28-42M296 176l28-42" stroke="#22c55e" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="224" cy="246" r="12" fill="#05070a"/>
+  <circle cx="288" cy="246" r="12" fill="#05070a"/>
+</svg>`;

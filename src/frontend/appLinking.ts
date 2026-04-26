@@ -1,3 +1,5 @@
+import { syncManifestLink } from "./pwa";
+
 const APP_QUERY_PARAM = "app";
 const ANDROID_PACKAGE_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$/;
 
@@ -14,6 +16,8 @@ export function writeUrlAppPackage(packageName: string): void {
   if (!isValidAndroidPackageName(packageName)) {
     return;
   }
+
+  syncManifestLink(packageName);
 
   const url = new URL(window.location.href);
   if (url.searchParams.get(APP_QUERY_PARAM) === packageName) {

@@ -16,6 +16,10 @@ import type {
 } from "../../src/server/types";
 
 describe("display config", () => {
+  it("uses a 1080x2400 default fallback when env is unset", () => {
+    expect(fallbackDisplayConfigFromEnv({})).toEqual({ width: 1080, height: 2400, display: 0 });
+  });
+
   it("uses fallback env when gRPC is unavailable", async () => {
     const client = new MockDisplayClient(new Error("unavailable"));
     const store = new DisplayConfigStore(
@@ -41,7 +45,7 @@ describe("display config", () => {
     const client = new MockDisplayClient(undefined, {
       displays: [{ width: 1440, height: 3120, display: 0 }]
     });
-    const store = new DisplayConfigStore(client, { width: 1080, height: 1920, display: 0 }, silentLogger());
+    const store = new DisplayConfigStore(client, { width: 1080, height: 2400, display: 0 }, silentLogger());
 
     await store.refresh();
 
@@ -55,15 +59,15 @@ describe("display config", () => {
       hardwareConfig: {
         entry: [
           { key: "hw.lcd.width", value: "1080" },
-          { key: "hw.lcd.height", value: "1920" }
+          { key: "hw.lcd.height", value: "2400" }
         ]
       }
     });
-    const store = new DisplayConfigStore(client, { width: 1080, height: 1920, display: 0 }, silentLogger());
+    const store = new DisplayConfigStore(client, { width: 1080, height: 2400, display: 0 }, silentLogger());
 
     await store.refresh();
 
-    expect(store.get()).toEqual({ width: 1080, height: 1920, display: 0 });
+    expect(store.get()).toEqual({ width: 1080, height: 2400, display: 0 });
     expect(store.getStatus()).toMatchObject({
       grpcAvailable: true,
       lastError: "getDisplayConfigurations is not implemented by this emulator image; using getStatus hardware config"
@@ -81,7 +85,7 @@ describe("display config", () => {
             ]
           }
         },
-        { width: 1080, height: 1920, display: 0 }
+        { width: 1080, height: 2400, display: 0 }
       )
     ).toEqual({ width: 720, height: 1280, display: 0 });
   });
@@ -91,13 +95,13 @@ describe("display config", () => {
       {
         displays: [
           { width: 800, height: 600, display: 2 },
-          { width: 1080, height: 1920, display: 0 }
+          { width: 1080, height: 2400, display: 0 }
         ]
       },
       { width: 320, height: 640, display: 0 }
     );
 
-    expect(selected).toEqual({ width: 1080, height: 1920, display: 0 });
+    expect(selected).toEqual({ width: 1080, height: 2400, display: 0 });
   });
 
   it("selects first display when display 0 is absent", () => {
