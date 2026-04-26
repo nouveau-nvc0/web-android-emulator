@@ -1,0 +1,45 @@
+{
+  "name": "remote-android-emulator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.server.json && tsc -p tsconfig.frontend.json && vite build",
+    "dev:server": "tsx src/server/index.ts",
+    "dev:frontend": "vite --host 0.0.0.0",
+    "start": "node dist/server/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "vitest run tests/server/integrationSmoke.test.ts"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.29.2",
+    "@grpc/grpc-js": "^1.13.3",
+    "@grpc/proto-loader": "^0.7.15",
+    "android-emulator-webrtc": "^1.0.18",
+    "events": "^3.3.0",
+    "express": "^5.1.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "ws": "^8.18.2"
+  },
+  "devDependencies": {
+    "@types/android-emulator-webrtc": "^1.0.0",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@types/supertest": "^6.0.3",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^4.4.1",
+    "jsdom": "^26.1.0",
+    "supertest": "^7.1.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.3",
+    "vitest": "^3.1.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

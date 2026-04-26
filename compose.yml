@@ -1,0 +1,116 @@
+services:
+  turn:
+    image: coturn/coturn:latest
+    entrypoint: ["/usr/local/bin/start-turn.sh"]
+    environment:
+      TURN_REALM: ${TURN_REALM:-remote-emulator}
+      TURN_SHARED_SECRET: ${TURN_SHARED_SECRET:-change-me}
+      TURN_PORT: ${TURN_PORT:-38002}
+      TURN_MIN_PORT: ${TURN_MIN_PORT:-38010}
+      TURN_MAX_PORT: ${TURN_MAX_PORT:-38050}
+      TURN_EXTERNAL_IP: ${TURN_EXTERNAL_IP:-}
+      TURN_DENY_PRIVATE_PEERS: ${TURN_DENY_PRIVATE_PEERS:-true}
+      TURN_USER_QUOTA: ${TURN_USER_QUOTA:-2}
+      TURN_TOTAL_QUOTA: ${TURN_TOTAL_QUOTA:-20}
+      TURN_MAX_BPS: ${TURN_MAX_BPS:-2500000}
+      TURN_BPS_CAPACITY: ${TURN_BPS_CAPACITY:-25000000}
+      TURN_STALE_NONCE_SECONDS: ${TURN_STALE_NONCE_SECONDS:-600}
+      TURN_MAX_ALLOCATE_LIFETIME_SECONDS: ${TURN_MAX_ALLOCATE_LIFETIME_SECONDS:-600}
+      TURN_PERMISSION_LIFETIME_SECONDS: ${TURN_PERMISSION_LIFETIME_SECONDS:-300}
+      TURN_CHANNEL_LIFETIME_SECONDS: ${TURN_CHANNEL_LIFETIME_SECONDS:-600}
+    ports:
+      - "${TURN_PORT:-38002}:${TURN_PORT:-38002}/udp"
+      - "${TURN_PORT:-38002}:${TURN_PORT:-38002}/tcp"
+      - "${TURN_MIN_PORT:-38010}-${TURN_MAX_PORT:-38050}:${TURN_MIN_PORT:-38010}-${TURN_MAX_PORT:-38050}/udp"
+    volumes:
+      - ./scripts/start-turn.sh:/usr/local/bin/start-turn.sh:ro
+
+  emulator:
+    image: ${EMULATOR_IMAGE:-us-docker.pkg.dev/android-emulator-268719/images/30-google-x64:30.1.2}
+    depends_on:
+      - turn
+    environment:
+      ADBKEY: ${ADBKEY:-}
+      ADBKEY_PUB: ${ADBKEY_PUB:-}
+      EMULATOR_PARAMS: ${EMULATOR_PARAMS:--no-window -no-audio -no-boot-anim -turncfg /usr/local/bin/turncfg.sh}
+      TURN_HOST: ${TURN_HOST:-localhost}
+      TURN_PORT: ${TURN_PORT:-38002}
+      TURN_USER: ${TURN_USER:-remote}
+      TURN_SHARED_SECRET: ${TURN_SHARED_SECRET:-change-me}
+      TURN_CREDENTIAL_TTL_SECONDS: ${TURN_CREDENTIAL_TTL_SECONDS:-3600}
+      TURN_ICE_TRANSPORT_POLICY: ${TURN_ICE_TRANSPORT_POLICY:-all}
+    devices:
+      - /dev/kvm:/dev/kvm
+    expose:
+      - "8554"
+      - "5554"
+      - "5555"
+    shm_size: "2gb"
+    tmpfs:
+      - /data
+    volumes:
+      - ./scripts/turncfg.sh:/usr/local/bin/turncfg.sh:ro
+
+  app:
+    build:
+      context: .
+    depends_on:
+      - emulator
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      EMULATOR_GRPC: ${EMULATOR_GRPC:-emulator:8554}
+      EMULATOR_PROTO: /app/proto/emulator_controller.proto
+      EMU_WIDTH: ${EMU_WIDTH:-1080}
+      EMU_HEIGHT: ${EMU_HEIGHT:-1920}
+      EMU_DISPLAY: ${EMU_DISPLAY:-0}
+      INPUT_MODE: ${INPUT_MODE:-unary}
+      DEBUG_ROUTES: ${DEBUG_ROUTES:-false}
+      GRPC_WEB_URI: ${GRPC_WEB_URI:-/grpc}
+      ENABLE_MOUSE_INPUT: ${ENABLE_MOUSE_INPUT:-false}
+      TOUCH_DEBUG: ${TOUCH_DEBUG:-false}
+    expose:
+      - "3000"
+
+  envoy:
+    image: envoyproxy/envoy:v1.31-latest
+    command: ["envoy", "-c", "/etc/envoy/envoy.yaml", "--log-level", "warning"]
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+    expose:
+      - "8080"
+
+  proxy:
+    image: caddy:2.8-alpine
+    depends_on:
+      - app
+      - envoy
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:-localhost}
+      LAN_HOST: ${LAN_HOST:-localhost}
+      HTTPS_PORT: ${HTTPS_PORT:-38001}
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-}
+      BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-38001}:443"
+      - "${HTTPS_PORT:-38001}:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    command:
+      - sh
+      - -c
+      - |
+        if [ -n "$$BASIC_AUTH_USER" ] && [ -n "$$BASIC_AUTH_PASSWORD" ]; then
+          HASH="$$(caddy hash-password --plaintext "$$BASIC_AUTH_PASSWORD")"
+          printf 'basic_auth {\n  %s %s\n}\n' "$$BASIC_AUTH_USER" "$$HASH" > /etc/caddy/auth.caddy
+        else
+          printf '# basic auth disabled\n' > /etc/caddy/auth.caddy
+        fi
+        exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+
+volumes:
+  caddy_data:
+  caddy_config:

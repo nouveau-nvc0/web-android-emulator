@@ -1,0 +1,33 @@
+{
+	default_sni {$LAN_HOST}
+	auto_https disable_redirects
+}
+
+(remote_app) {
+	import /etc/caddy/auth.caddy
+
+	encode zstd gzip
+
+	reverse_proxy /grpc* envoy:8080
+	reverse_proxy /touch app:3000
+	reverse_proxy /display-config app:3000
+	reverse_proxy /emulator-status app:3000
+	reverse_proxy /healthz app:3000
+	reverse_proxy /config.json app:3000
+	reverse_proxy /debug/* app:3000
+	reverse_proxy app:3000
+}
+
+{$PUBLIC_HOST:localhost} {
+	tls internal
+	import remote_app
+}
+
+{$LAN_HOST} {
+	tls internal
+	import remote_app
+}
+
+http://:80 {
+	redir https://{host}:{$HTTPS_PORT}{uri} permanent
+}
