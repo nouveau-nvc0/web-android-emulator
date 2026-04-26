@@ -16,6 +16,8 @@ export default defineConfig({
     proxy: {
       "/display-config": "http://127.0.0.1:3000",
       "/healthz": "http://127.0.0.1:3000",
+      "/app-state": "http://127.0.0.1:3000",
+      "/launch-app": "http://127.0.0.1:3000",
       "/config.json": "http://127.0.0.1:3000",
       "/config.js": "http://127.0.0.1:3000",
       "/debug": "http://127.0.0.1:3000",

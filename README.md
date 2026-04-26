@@ -62,6 +62,8 @@ ADBKEY=
 ADBKEY_PUB=
 ```
 
+The web app also uses ADB inside the Compose network to detect and launch the foreground Android package. When you open an app in the emulator, the browser URL is updated to `?app=<package.name>`. Opening that URL later asks the emulator to launch the same package. If `ADBKEY` and `ADBKEY_PUB` are set, the app container writes them to its ADB client key path before connecting.
+
 ## Proto
 
 The repository includes a minimal compatible `proto/emulator_controller.proto`. To use the SDK proto:
@@ -125,6 +127,9 @@ INPUT_MODE=unary
 GRPC_WEB_URI=/grpc
 ENABLE_MOUSE_INPUT=false
 TOUCH_DEBUG=false
+APP_CONTROL_ENABLED=true
+EMULATOR_ADB_SERIAL=emulator:5555
+ADB_BIN=adb
 BASIC_AUTH_USER=
 BASIC_AUTH_PASSWORD=
 DEBUG_ROUTES=false
@@ -135,6 +140,8 @@ CLOUDFLARE_API_TOKEN=
 ```
 
 `INPUT_MODE=unary` uses `sendTouch` and is the default for the Docker emulator image. `INPUT_MODE=stream` is kept for emulator builds where `streamInputEvent` is available.
+
+`APP_CONTROL_ENABLED=true` enables URL app linking through ADB. `EMULATOR_ADB_SERIAL` points to the emulator ADB TCP endpoint inside the Compose network.
 
 `TURN_SHARED_SECRET` must be a strong random value, for example:
 
@@ -159,6 +166,14 @@ Coturn uses the TURN REST API: the browser receives short-lived HMAC credentials
 ```
 
 `GET /emulator-status` shows emulator gRPC availability.
+
+`GET /app-state` shows the foreground Android package when ADB is available.
+
+`POST /launch-app`
+
+```json
+{ "packageName": "com.android.settings" }
+```
 
 WebSocket endpoint: `/touch`.
 

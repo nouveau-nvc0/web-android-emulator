@@ -76,6 +76,36 @@ describe("integration smoke", () => {
       y: 384
     });
   });
+
+  it("serves app state and validates package launches", async () => {
+    const launches: string[] = [];
+    const app = createServerApp({
+      getDisplayConfig: () => display,
+      appControl: {
+        getForegroundPackage: async () => ({
+          packageName: "com.example.active",
+          lastError: null,
+          checkedAt: "2026-04-26T00:00:00.000Z"
+        }),
+        launchPackage: async (packageName) => {
+          launches.push(packageName);
+        }
+      }
+    });
+
+    await request(app).get("/app-state").expect(200, {
+      packageName: "com.example.active",
+      lastError: null,
+      checkedAt: "2026-04-26T00:00:00.000Z"
+    });
+
+    await request(app).post("/launch-app").send({ packageName: "com.example.target" }).expect(200, {
+      packageName: "com.example.target"
+    });
+    await request(app).post("/launch-app").send({ packageName: "bad;package" }).expect(400);
+
+    expect(launches).toEqual(["com.example.target"]);
+  });
 });
 
 function listen(target: ReturnType<typeof createServer>): Promise<number> {

@@ -69,6 +69,11 @@ services:
       GRPC_WEB_URI: ${GRPC_WEB_URI:-/grpc}
       ENABLE_MOUSE_INPUT: ${ENABLE_MOUSE_INPUT:-false}
       TOUCH_DEBUG: ${TOUCH_DEBUG:-false}
+      APP_CONTROL_ENABLED: ${APP_CONTROL_ENABLED:-true}
+      EMULATOR_ADB_SERIAL: ${EMULATOR_ADB_SERIAL:-emulator:5555}
+      ADB_BIN: ${ADB_BIN:-adb}
+      ADBKEY: ${ADBKEY:-}
+      ADBKEY_PUB: ${ADBKEY_PUB:-}
     expose:
       - "3000"
 

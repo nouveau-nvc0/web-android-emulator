@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { Emulator } from "android-emulator-webrtc/emulator";
+import { fetchForegroundAppPackage, launchAppPackage, readUrlAppPackage, writeUrlAppPackage } from "./appLinking";
 import { getFrontendConfig } from "./config";
 import { fetchEmulatorStatus, type EmulatorStatus } from "./emulatorStatus";
 import { installTouchOverlay, mediaContentRect } from "./touchOverlay";
@@ -34,6 +35,7 @@ export function RemoteEmulator(): ReactElement {
   const grpcUri = frontendConfig.grpcWebUri;
   const enableMouseInput = frontendConfig.enableMouseInput;
   const debugOverlay = frontendConfig.touchDebug;
+  const appLinkingEnabled = frontendConfig.appLinkingEnabled;
   const touchSocketUrl = useMemo(() => toWebSocketUrl("/touch"), []);
 
   useEffect(() => {
@@ -119,6 +121,71 @@ export function RemoteEmulator(): ReactElement {
       onDebugPoints: debugOverlay ? setDebugPoints : undefined
     });
   }, [debugOverlay, displayConfig, enableMouseInput, touchSocketUrl]);
+
+  useEffect(() => {
+    if (!appLinkingEnabled) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    let pendingLaunchPackage = readUrlAppPackage();
+    let suppressUrlUpdatesUntil = pendingLaunchPackage ? Date.now() + 5000 : 0;
+
+    async function launchFromUrl(packageName: string): Promise<void> {
+      pendingLaunchPackage = packageName;
+      suppressUrlUpdatesUntil = Date.now() + 5000;
+      await launchAppPackage(packageName);
+    }
+
+    async function refreshForegroundApp(): Promise<void> {
+      const packageName = await fetchForegroundAppPackage();
+      if (cancelled || !packageName) {
+        return;
+      }
+
+      if (pendingLaunchPackage && packageName !== pendingLaunchPackage && Date.now() < suppressUrlUpdatesUntil) {
+        return;
+      }
+
+      pendingLaunchPackage = null;
+      writeUrlAppPackage(packageName);
+    }
+
+    if (pendingLaunchPackage) {
+      void launchFromUrl(pendingLaunchPackage)
+        .catch((error: unknown) => {
+          console.warn("launch-app failed", error);
+        })
+        .finally(() => {
+          void refreshForegroundApp().catch(() => undefined);
+        });
+    } else {
+      void refreshForegroundApp().catch(() => undefined);
+    }
+
+    const interval = window.setInterval(() => {
+      void refreshForegroundApp().catch(() => undefined);
+    }, 2000);
+
+    const onPopState = (): void => {
+      const packageName = readUrlAppPackage();
+      if (!packageName) {
+        return;
+      }
+
+      void launchFromUrl(packageName).catch((error: unknown) => {
+        console.warn("launch-app failed", error);
+      });
+    };
+
+    window.addEventListener("popstate", onPopState);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, [appLinkingEnabled]);
 
   return (
     <main className="remoteStage" aria-label="Remote Android Emulator">

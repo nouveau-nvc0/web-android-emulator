@@ -2,6 +2,17 @@ export type BrowserTouchType = "down" | "move" | "up" | "cancel";
 export type BrowserPointerType = "touch" | "pen" | "mouse";
 export type InputMode = "stream" | "unary";
 
+export interface ForegroundAppState {
+  packageName: string | null;
+  lastError: string | null;
+  checkedAt: string | null;
+}
+
+export interface AppControl {
+  getForegroundPackage(): Promise<ForegroundAppState>;
+  launchPackage(packageName: string): Promise<void>;
+}
+
 export interface BrowserTouchMessage {
   type: BrowserTouchType;
   id: string;
