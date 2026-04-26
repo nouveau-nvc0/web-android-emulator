@@ -149,8 +149,8 @@ function createWebManifest(packageName: string | null): {
     display: "fullscreen",
     display_override: ["fullscreen", "standalone", "minimal-ui"],
     orientation: "portrait",
-    background_color: "#05070a",
-    theme_color: "#05070a",
+    background_color: "#000000",
+    theme_color: "#000000",
     icons: [
       {
         src: "/pwa-icon.svg",

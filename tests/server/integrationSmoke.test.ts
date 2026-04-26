@@ -88,7 +88,10 @@ describe("integration smoke", () => {
         expect(res.body).toMatchObject({
           id: "/pwa/default",
           start_url: "/",
-          display: "fullscreen"
+          display: "fullscreen",
+          orientation: "portrait",
+          background_color: "#000000",
+          theme_color: "#000000"
         });
       });
 
@@ -100,7 +103,8 @@ describe("integration smoke", () => {
           id: "/pwa/com.example.target",
           short_name: "target",
           start_url: "/?app=com.example.target",
-          display: "fullscreen"
+          display: "fullscreen",
+          orientation: "portrait"
         });
       });
   });

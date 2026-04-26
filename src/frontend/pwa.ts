@@ -5,23 +5,56 @@ export function syncManifestLink(packageName: string | null): void {
   link.href = manifestHref(packageName);
 }
 
-export function installFullscreenRequest(): void {
-  const requestFullscreen = (): void => {
-    if (isStandaloneDisplayMode() || document.fullscreenElement || !document.fullscreenEnabled) {
-      return;
-    }
+export async function goFullscreen(): Promise<void> {
+  if (isStandaloneDisplayMode() || document.fullscreenElement || !document.fullscreenEnabled) {
+    return;
+  }
 
-    void document.documentElement
-      .requestFullscreen({ navigationUI: "hide" })
+  await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+}
+
+export function installFullscreenRequest(): void {
+  let armed = false;
+
+  const requestFullscreen = (): void => {
+    void goFullscreen()
       .then(() => {
-        window.removeEventListener("pointerdown", requestFullscreen, true);
-        window.removeEventListener("keydown", requestFullscreen, true);
+        if (isStandaloneDisplayMode() || document.fullscreenElement) {
+          disarm();
+        }
       })
       .catch(() => undefined);
   };
 
-  window.addEventListener("pointerdown", requestFullscreen, true);
-  window.addEventListener("keydown", requestFullscreen, true);
+  const arm = (): void => {
+    if (armed || isStandaloneDisplayMode() || document.fullscreenElement || !document.fullscreenEnabled) {
+      return;
+    }
+
+    window.addEventListener("pointerdown", requestFullscreen, true);
+    window.addEventListener("keydown", requestFullscreen, true);
+    armed = true;
+  };
+
+  const disarm = (): void => {
+    if (!armed) {
+      return;
+    }
+
+    window.removeEventListener("pointerdown", requestFullscreen, true);
+    window.removeEventListener("keydown", requestFullscreen, true);
+    armed = false;
+  };
+
+  document.addEventListener("fullscreenchange", () => {
+    if (document.fullscreenElement || isStandaloneDisplayMode()) {
+      disarm();
+    } else {
+      arm();
+    }
+  });
+
+  arm();
 }
 
 export function registerServiceWorker(): void {
