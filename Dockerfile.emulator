@@ -1,0 +1,74 @@
+FROM ubuntu:24.04
+
+ARG ANDROID_COMMANDLINE_TOOLS_ZIP=commandlinetools-linux-13114758_latest.zip
+ARG ANDROID_API_LEVEL=35
+ARG ANDROID_SYSTEM_IMAGE=system-images;android-35;google_apis;x86_64
+ARG ANDROID_AVD_NAME=test35
+ARG ANDROID_DEVICE=pixel_7
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_SDK_ROOT=/opt/android-sdk
+ENV ANDROID_AVD_HOME=/root/.android/avd
+ENV ANDROID_AVD_NAME=${ANDROID_AVD_NAME}
+ENV PATH=${PATH}:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      libasound2t64 \
+      libatk-bridge2.0-0 \
+      libatk1.0-0 \
+      libcups2 \
+      libdbus-1-3 \
+      libdrm2 \
+      libfontconfig1 \
+      libgbm1 \
+      libgl1 \
+      libnss3 \
+      libpulse0 \
+      libx11-6 \
+      libxcb1 \
+      libxcomposite1 \
+      libxcursor1 \
+      libxdamage1 \
+      libxext6 \
+      libxfixes3 \
+      libxi6 \
+      libxkbcommon0 \
+      libxrandr2 \
+      libxtst6 \
+      openjdk-17-jre-headless \
+      openssl \
+      pulseaudio \
+      socat \
+      unzip \
+      wget \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" /root/.android \
+    && wget -O /tmp/cmdline-tools.zip "https://dl.google.com/android/repository/${ANDROID_COMMANDLINE_TOOLS_ZIP}" \
+    && unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools \
+    && mv /tmp/cmdline-tools/cmdline-tools "${ANDROID_HOME}/cmdline-tools/latest" \
+    && rm -rf /tmp/cmdline-tools /tmp/cmdline-tools.zip
+
+RUN yes | sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" --licenses >/dev/null \
+    && sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" \
+      "platform-tools" \
+      "emulator" \
+      "platforms;android-${ANDROID_API_LEVEL}" \
+      "${ANDROID_SYSTEM_IMAGE}"
+
+RUN echo "no" | avdmanager create avd \
+      -n "${ANDROID_AVD_NAME}" \
+      -k "${ANDROID_SYSTEM_IMAGE}" \
+      --device "${ANDROID_DEVICE}" \
+      --force
+
+COPY scripts/start-emulator.sh /usr/local/bin/start-emulator.sh
+RUN chmod +x /usr/local/bin/start-emulator.sh
+
+EXPOSE 8554 5554 5555
+
+CMD ["/usr/local/bin/start-emulator.sh"]

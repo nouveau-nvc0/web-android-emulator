@@ -35,13 +35,21 @@ https://<LAN_HOST>:<HTTPS_PORT>/
 
 ## Docker Emulator
 
-Compose starts the `emulator` service from the hosted Android Emulator container image:
+Compose builds the `emulator` service from `Dockerfile.emulator`. The default image installs Android API 35 with a Google APIs x86_64 system image:
 
 ```env
-EMULATOR_IMAGE=us-docker.pkg.dev/android-emulator-268719/images/30-google-x64:30.1.2
+EMULATOR_IMAGE=web-android-emulator-emulator:android-35
+ANDROID_API_LEVEL=35
+ANDROID_SYSTEM_IMAGE=system-images;android-35;google_apis;x86_64
+ANDROID_AVD_NAME=test35
+ANDROID_DEVICE=pixel_7
 EMULATOR_GRPC=emulator:8554
-EMULATOR_PARAMS=-no-window -no-audio -no-boot-anim -turncfg /usr/local/bin/turncfg.sh
+EMULATOR_BASE_PARAMS=
+EMULATOR_MEMORY_MB=
+EMULATOR_CORES=
 ```
+
+The launcher defaults include `-gpu software`. Set `EMULATOR_MEMORY_MB` and `EMULATOR_CORES` to add `-memory` and `-cores` without replacing the full emulator argument list. `EMULATOR_EXTRA_PARAMS` appends raw emulator flags, and `EMULATOR_PARAMS` remains a full override escape hatch.
 
 Ports `8554`, `5554`, and `5555` are only exposed inside the Docker network and are not published externally.
 
@@ -116,8 +124,16 @@ TURN_TOTAL_QUOTA=20
 TURN_MAX_BPS=2500000
 TURN_BPS_CAPACITY=25000000
 EMULATOR_GRPC=emulator:8554
-EMULATOR_IMAGE=us-docker.pkg.dev/android-emulator-268719/images/30-google-x64:30.1.2
-EMULATOR_PARAMS=-no-window -no-audio -no-boot-anim -turncfg /usr/local/bin/turncfg.sh
+EMULATOR_IMAGE=web-android-emulator-emulator:android-35
+ANDROID_API_LEVEL=35
+ANDROID_SYSTEM_IMAGE=system-images;android-35;google_apis;x86_64
+ANDROID_AVD_NAME=test35
+ANDROID_DEVICE=pixel_7
+EMULATOR_BASE_PARAMS=
+EMULATOR_MEMORY_MB=
+EMULATOR_CORES=
+EMULATOR_EXTRA_PARAMS=
+EMULATOR_PARAMS=
 ADBKEY=
 ADBKEY_PUB=
 EMU_WIDTH=1080
@@ -140,6 +156,8 @@ CLOUDFLARE_API_TOKEN=
 ```
 
 `INPUT_MODE=unary` uses `sendTouch` and is the default for the Docker emulator image. `INPUT_MODE=stream` is kept for emulator builds where `streamInputEvent` is available.
+
+`EMULATOR_MEMORY_MB=12288` and `EMULATOR_CORES=38` append `-memory 12288 -cores 38` to the default emulator flags. Prefer these variables over replacing `EMULATOR_PARAMS`; use `EMULATOR_PARAMS` only when you need to fully own the emulator command-line additions.
 
 `APP_CONTROL_ENABLED=true` enables URL app linking through ADB. `EMULATOR_ADB_SERIAL` points to the emulator ADB TCP endpoint inside the Compose network.
 

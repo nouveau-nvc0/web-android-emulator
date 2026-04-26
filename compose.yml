@@ -26,13 +26,27 @@ services:
       - ./scripts/start-turn.sh:/usr/local/bin/start-turn.sh:ro
 
   emulator:
-    image: ${EMULATOR_IMAGE:-us-docker.pkg.dev/android-emulator-268719/images/30-google-x64:30.1.2}
+    build:
+      context: .
+      dockerfile: Dockerfile.emulator
+      args:
+        ANDROID_API_LEVEL: ${ANDROID_API_LEVEL:-35}
+        ANDROID_SYSTEM_IMAGE: ${ANDROID_SYSTEM_IMAGE:-system-images;android-35;google_apis;x86_64}
+        ANDROID_AVD_NAME: ${ANDROID_AVD_NAME:-test35}
+        ANDROID_DEVICE: ${ANDROID_DEVICE:-pixel_7}
+    image: ${EMULATOR_IMAGE:-web-android-emulator-emulator:android-35}
+    command: ["/usr/local/bin/start-emulator.sh"]
     depends_on:
       - turn
     environment:
       ADBKEY: ${ADBKEY:-}
       ADBKEY_PUB: ${ADBKEY_PUB:-}
-      EMULATOR_PARAMS: ${EMULATOR_PARAMS:--no-window -no-audio -no-boot-anim -turncfg /usr/local/bin/turncfg.sh}
+      ANDROID_AVD_NAME: ${ANDROID_AVD_NAME:-test35}
+      EMULATOR_BASE_PARAMS: ${EMULATOR_BASE_PARAMS:-}
+      EMULATOR_PARAMS: ${EMULATOR_PARAMS:-}
+      EMULATOR_MEMORY_MB: ${EMULATOR_MEMORY_MB:-}
+      EMULATOR_CORES: ${EMULATOR_CORES:-}
+      EMULATOR_EXTRA_PARAMS: ${EMULATOR_EXTRA_PARAMS:-}
       TURN_HOST: ${TURN_HOST:-localhost}
       TURN_PORT: ${TURN_PORT:-38002}
       TURN_USER: ${TURN_USER:-remote}
@@ -49,6 +63,7 @@ services:
     tmpfs:
       - /data
     volumes:
+      - ./scripts/start-emulator.sh:/usr/local/bin/start-emulator.sh:ro
       - ./scripts/turncfg.sh:/usr/local/bin/turncfg.sh:ro
 
   app:
