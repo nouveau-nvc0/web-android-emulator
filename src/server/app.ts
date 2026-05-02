@@ -103,11 +103,6 @@ export function createServerApp(options: AppOptions): express.Express {
     res.json(createWebManifest(readManifestPackage(req.query.app)));
   });
 
-  app.get("/pwa-icon.svg", (_req, res) => {
-    res.type("image/svg+xml");
-    res.send(PWA_ICON_SVG);
-  });
-
   if (options.debugRoutes) {
     app.get("/debug/state", (_req, res) => {
       res.json(options.getDebugState?.() ?? { display: options.getDisplayConfig() });
@@ -153,22 +148,26 @@ function createWebManifest(packageName: string | null): {
     theme_color: "#000000",
     icons: [
       {
-        src: "/pwa-icon.svg",
+        src: "/pwa-icon-192.png",
         sizes: "192x192",
-        type: "image/svg+xml",
-        purpose: "any maskable"
+        type: "image/png"
       },
       {
-        src: "/pwa-icon.svg",
+        src: "/pwa-icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "maskable"
+      },
+      {
+        src: "/pwa-icon-512.png",
         sizes: "512x512",
-        type: "image/svg+xml",
-        purpose: "any maskable"
+        type: "image/png"
       },
       {
-        src: "/pwa-icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
-        purpose: "any maskable"
+        src: "/pwa-icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable"
       }
     ]
   };
@@ -223,14 +222,3 @@ function disabledAppState(): ForegroundAppState {
 function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
-
-const PWA_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#05070a"/>
-  <rect x="118" y="54" width="276" height="404" rx="42" fill="#f8fafc"/>
-  <rect x="142" y="98" width="228" height="272" rx="18" fill="#111827"/>
-  <circle cx="256" cy="414" r="20" fill="#111827"/>
-  <path d="M206 196h100a34 34 0 0 1 34 34v58H172v-58a34 34 0 0 1 34-34Z" fill="#22c55e"/>
-  <path d="M216 176l-28-42M296 176l28-42" stroke="#22c55e" stroke-width="18" stroke-linecap="round"/>
-  <circle cx="224" cy="246" r="12" fill="#05070a"/>
-  <circle cx="288" cy="246" r="12" fill="#05070a"/>
-</svg>`;
