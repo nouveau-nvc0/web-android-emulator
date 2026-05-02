@@ -51,6 +51,10 @@ EMULATOR_CORES=
 
 The launcher defaults include `-gpu software`. Set `EMULATOR_MEMORY_MB` and `EMULATOR_CORES` to add `-memory` and `-cores` without replacing the full emulator argument list. `EMULATOR_EXTRA_PARAMS` appends raw emulator flags, and `EMULATOR_PARAMS` remains a full override escape hatch.
 
+The emulator service stores `~/.android` in the named Docker volume `emulator_android_home`, so installed Android apps and other AVD state survive container recreation. Set `EMULATOR_WIPE_DATA=true` for a one-time clean boot, or remove the volume with `docker compose down -v` when you intentionally want to reset the emulator.
+
+The startup script also forces `hw.keyboard=no` in the AVD config so Android behaves like a phone and shows the on-screen keyboard instead of assuming a physical keyboard is attached.
+
 Ports `8554`, `5554`, and `5555` are only exposed inside the Docker network and are not published externally.
 
 For NAT traversal, Compose starts coturn. Forward these ports from your router to the Docker host:
@@ -137,6 +141,7 @@ EMULATOR_BASE_PARAMS=
 EMULATOR_MEMORY_MB=
 EMULATOR_CORES=
 EMULATOR_EXTRA_PARAMS=
+EMULATOR_WIPE_DATA=false
 EMULATOR_PARAMS=
 ADBKEY=
 ADBKEY_PUB=
@@ -163,6 +168,8 @@ CLOUDFLARE_API_TOKEN=
 `INPUT_MODE=unary` uses `sendTouch` and is the default for the Docker emulator image. `INPUT_MODE=stream` is kept for emulator builds where `streamInputEvent` is available.
 
 `EMULATOR_MEMORY_MB=12288` and `EMULATOR_CORES=38` append `-memory 12288 -cores 38` to the default emulator flags. Prefer these variables over replacing `EMULATOR_PARAMS`; use `EMULATOR_PARAMS` only when you need to fully own the emulator command-line additions.
+
+`EMULATOR_WIPE_DATA=false` keeps the AVD userdata between launches, including installed APKs. Set `EMULATOR_WIPE_DATA=true` when you need to discard the current emulator state on boot.
 
 `APP_CONTROL_ENABLED=true` enables URL app linking through ADB. `EMULATOR_ADB_SERIAL` points to the emulator ADB TCP endpoint inside the Compose network.
 

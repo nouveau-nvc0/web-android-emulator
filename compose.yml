@@ -51,6 +51,7 @@ services:
       EMULATOR_MEMORY_MB: ${EMULATOR_MEMORY_MB:-}
       EMULATOR_CORES: ${EMULATOR_CORES:-}
       EMULATOR_EXTRA_PARAMS: ${EMULATOR_EXTRA_PARAMS:-}
+      EMULATOR_WIPE_DATA: ${EMULATOR_WIPE_DATA:-false}
       TURN_HOST: ${TURN_HOST:-localhost}
       TURN_PORT: ${TURN_PORT:-38002}
       TURN_USER: ${TURN_USER:-remote}
@@ -72,6 +73,7 @@ services:
     tmpfs:
       - /data
     volumes:
+      - emulator_android_home:/root/.android
       - ./scripts/start-emulator.sh:/usr/local/bin/start-emulator.sh:ro
       - ./scripts/turncfg.sh:/usr/local/bin/turncfg.sh:ro
 
@@ -170,3 +172,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  emulator_android_home:
